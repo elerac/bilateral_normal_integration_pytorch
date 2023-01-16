@@ -126,18 +126,12 @@ def main():
         for j in pbar_sub:
             optimizer.zero_grad()
 
-            img_dzu_posi, img_dzu_nega = nz_u * torch.nn.functional.conv2d(z[None, ...], kernels_u, padding="same")
-            img_dzv_posi, img_dzv_nega = nz_v * torch.nn.functional.conv2d(z[None, ...], kernels_v, padding="same")
+            dzu_posi, dzu_nega = nz_u * torch.nn.functional.conv2d(z[None, ...], kernels_u, padding="same")
+            dzv_posi, dzv_nega = nz_v * torch.nn.functional.conv2d(z[None, ...], kernels_v, padding="same")
 
             loss = (
                 torch.sum(
-                    mask
-                    * (
-                        wu * (img_dzu_posi + nx) ** 2
-                        + (1 - wu) * (img_dzu_nega + nx) ** 2
-                        + wv * (img_dzv_posi + ny) ** 2
-                        + (1 - wv) * (img_dzv_nega + ny) ** 2
-                    )
+                    mask * (wu * (dzu_posi + nx) ** 2 + (1 - wu) * (dzu_nega + nx) ** 2 + wv * (dzv_posi + ny) ** 2 + (1 - wv) * (dzv_nega + ny) ** 2)
                 )
                 / num_normals
             )
@@ -154,8 +148,8 @@ def main():
 
         # update weights
         with torch.no_grad():
-            wu = sigmoid(img_dzu_nega**2 - img_dzu_posi**2, k)
-            wv = sigmoid(img_dzv_nega**2 - img_dzv_posi**2, k)
+            wu = sigmoid(dzu_nega**2 - dzu_posi**2, k)
+            wv = sigmoid(dzv_nega**2 - dzv_posi**2, k)
 
         # compute relative loss to judge whether the iteration should be terminated
         loss = loss_sub
